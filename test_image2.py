@@ -24,38 +24,29 @@ width, height = scaled_image.size
 scaled_image_data = np.asarray(image, dtype='float32') / 255.
 
 rows = []
-for y in xrange(0, height, 16):
+for y in xrange(0, height-16, 16):
   cells = []
-  for x in xrange(0, width, 16):
+  for x in xrange(0, width-16, 16):
     tile = scaled_image_data[y:y+32, x:x+32, :]
     output = unet.model.predict(np.array([tile]))
-    output_data = (output * 255).astype('uint8')
+    output_data = (output * (255. / 4.)).astype('uint8')
     cells.append(output_data[0])
-    #output_image = Image.fromarray(output_data[0,:,:,0]).convert("RGB")
-    #output_image.save("beetil1_heatmap_%d_%d.png" % (x, y))
-  row = np.concatenate(cells, axis=1)
+
+  # recombine
+  even_cells = [cells[i] for i in xrange(0, len(cells), 2)]
+  odd_cells = [cells[i] for i in xrange(1, len(cells), 2)]
+  even_row = np.concatenate(even_cells, axis=1)
+  odd_row = np.concatenate(odd_cells, axis=1)
+  odd_row = np.pad(odd_row, ((0,0), (16,16), (0,0)), 'constant')
+  row = even_row + odd_row
   rows.append(row)
-full_image_data = np.concatenate(rows, axis=0)
+
+# recombine
+even_rows = [rows[i] for i in xrange(0, len(rows), 2)]
+odd_rows = [rows[i] for i in xrange(1, len(rows), 2)]
+even_image_data = np.concatenate(even_rows, axis=0)
+odd_image_data = np.concatenate(odd_rows, axis=0)
+odd_image_data = np.pad(odd_image_data, ((16,16), (0,0), (0,0)), 'constant')
+full_image_data = even_image_data + odd_image_data
 output_image = Image.fromarray(full_image_data[:,:,0]).convert("RGB")
 output_image.save("beetil1_heatmap%dx%d.png" % (width, height))
-
-def save_scaled_heatmap(image, scale):
-  width = scale*16*4
-  height = scale*16*3
-  image = image.resize((width, height))
-  scaled_image_data = np.asarray(image, dtype='float32') / 255.
-
-  output = unet.model.predict(np.array([scaled_image_data]))
-
-  output_data = (output * 255).astype('uint8')
-
-  output_image = Image.fromarray(output_data[0,:,:,0]).convert("RGB")
-
-  output_image.save("beetil1_heatmap%dx%d.png" % (width, height))
-
-#save_scaled_heatmap(image, 6)
-#save_scaled_heatmap(image, 5)
-#save_scaled_heatmap(image, 4)
-#save_scaled_heatmap(image, 3)
-#save_scaled_heatmap(image, 2)
-#save_scaled_heatmap(image, 1)
