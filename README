@@ -1,0 +1,6 @@
+This is an implementation of U-Net applied to scene text recognition
+
+The idea is as follows
+
+* Use U-Net to mask individual characters in the image
+* Apply character recognition (MNIST-trained or other) to recognise the characters
